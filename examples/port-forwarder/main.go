@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/mmmorris1975/ssm-session-client/ssmclient"
+	"github.com/ncsurfus/ssm-session-client/ssmclient"
 )
 
 // Start a SSM port forwarding session.

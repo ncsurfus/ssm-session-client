@@ -36,6 +36,7 @@ type DataChannel interface {
 // SsmDataChannel represents the data channel of the websocket connection used to communicate with the AWS
 // SSM service.  A new(SsmDataChannel) is ready for use, and should immediately call the Open() method.
 type SsmDataChannel struct {
+	dataSeqNum  int64
 	seqNum      int64
 	inSeqNum    int64
 	mu          sync.Mutex
@@ -51,6 +52,7 @@ type SsmDataChannel struct {
 
 // Open creates the web socket connection with the AWS service and opens the data channel.
 func (c *SsmDataChannel) Open(cfg aws.Config, in *ssm.StartSessionInput) error {
+	c.dataSeqNum = -1
 	c.handshakeCh = make(chan bool, 1)
 	c.outMsgBuf = NewMessageBuffer(50)
 	c.inMsgBuf = NewMessageBuffer(50)
@@ -255,6 +257,12 @@ func (c *SsmDataChannel) HandleMsg(data []byte) ([]byte, error) {
 	case OutputStreamData:
 		switch m.PayloadType {
 		case Output:
+			// Dedupe Check
+			if c.dataSeqNum >= m.SequenceNumber {
+				return []byte{}, nil
+			}
+			c.dataSeqNum = m.SequenceNumber
+
 			// unbuffered - return payload directly
 			if c.inMsgBuf == nil {
 				_ = c.sendAcknowledgeMessage(m) // todo - handle error?
